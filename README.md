@@ -102,10 +102,25 @@ python main.py
 ```
 
 El script pedirá:
-1. **DNI** del usuario.
-2. **Correo electrónico** al que se enviará el código.
+1. **DNI** del usuario (validado: 8 dígitos numéricos).
+2. **Correo electrónico** (validado: formato válido).
 3. El **código de verificación** recibido.
-4. La **nueva contraseña**.
+4. La **nueva contraseña** (validada: mínimo 8 caracteres).
+
+### Validaciones de entrada
+
+| Campo          | Validación aplicada                       |
+|----------------|-------------------------------------------|
+| DNI            | 8 dígitos numéricos                       |
+| Correo         | Formato de email válido                   |
+| Código         | No vacío                                  |
+| Contraseña     | Mínimo 8 caracteres                       |
+
+### Manejo de errores de red
+
+- **Timeouts** y **errores de conexión** se reintentan automáticamente (configurable).
+- Los errores controlados de la API, HTTP y de red se muestran limpios sin crash.
+- El modo `-v` debuggea cada petición en logs.
 
 ## 🗂️ Estructura del proyecto
 
@@ -113,15 +128,39 @@ El script pedirá:
 change-pass/
 ├── main.py                    # Entry point / orquestador del flujo
 ├── config.py                  # Constantes y cabeceras de API
+├── config_loader.py           # Carga de appsettings.json (timeout, proxies, verbose...)
+├── http_client.py             # Cliente HTTP: reintentos, timeouts, manejo de errores
+├── logging_setup.py           # Configuración de logs (nivel verbose/INFO)
+├── validators.py              # Validación de DNI, email, código y contraseña
+├── appsettings.json           # Configuración avanzada (proxies, timeouts...)
+├── api_examples.http          # Documentación de los 3 endpoints
 ├── requirements.txt           # Dependencias
 ├── .gitignore
-└── ui/
+├── ui/
 │   ├── __init__.py
 │   ├── display.py             # Banner, cajas, paneles, mensajes
 │   └── prompts.py             # Inputs interactivos
 └── services/
     ├── __init__.py
     └── password_changer.py    # Lógica de API (verificar/enviar/cambiar)
+```
+
+## ⚙️ Configuración avanzada
+
+El archivo `appsettings.json` permite ajustar el comportamiento sin tocar el código:
+
+| Clave         | Tipo    | Descripción                                       |
+|---------------|---------|---------------------------------------------------|
+| `timeout`     | número  | Timeout de cada petición (segundos)               |
+| `max_retries` | entero  | Reintentos ante timeout/errores de conexión       |
+| `backoff`     | número  | Espera base entre reintentos (segundos)           |
+| `verbose`     | bool    | Logs de depuración de cada petición               |
+| `proxies`     | objeto  | Proxies HTTP/HTTPS, ej. `{ "http": "...", "https": "..." }` |
+
+También se puede activar el modo verbose desde la línea de comandos:
+
+```bash
+python main.py -v
 ```
 
 ## ⚖️ Declaración legal

@@ -1,0 +1,55 @@
+##################################################################
+#  EmpleosPeru - Restablecimiento de contrasena
+#  Documentacion de los 3 endpoints (uso educativo/responsable)
+##################################################################
+
+@host = https://www.empleosperu.gob.pe
+@dni = TU_DNI
+@email = TU_CORREO
+
+# ---------------------------------------------------------
+# 1. Verificar usuario (devuelve token de identidad y celular)
+# ---------------------------------------------------------
+GET {{host}}/usermanagement/usuario/resetpassword/verificar
+    ?id-documento=10080399
+    &nu-documento={{dni}}
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36
+Accept: application/json, text/plain, */*
+
+###
+
+# ---------------------------------------------------------
+# 2. Enviar codigo de verificacion al correo
+#    Reemplaza <TOKEN> por el token devuelto en el paso 1
+# ---------------------------------------------------------
+POST {{host}}/usermanagement/email/enviar
+Content-Type: application/json
+X-Validate-Identity: <TOKEN>
+
+{
+  "nInMotivo": 10140202,
+  "sEmailTo": "{{email}}"
+}
+
+###
+
+# ---------------------------------------------------------
+# 3. Confirmar (cambiar contrasena)
+#    Reemplaza <CODIGO> por el codigo recibido
+# ---------------------------------------------------------
+POST {{host}}/usermanagement/usuario/resetpassword/confirmar
+Content-Type: application/json
+X-Validate-Identity: <TOKEN>
+
+{
+  "bIndicadorEmail": false,
+  "nInDocIdentidad": 10080399,
+  "sCodigoCelular": "",
+  "sCodigoEmail": "<CODIGO>",
+  "sNuDocIdentidad": "{{dni}}",
+  "sNumeroCelular": "<CELULAR_REGISTRADO>",
+  "sEmail": "{{email}}",
+  "sPassword": "NUEVA_CONTRASENA",
+  "sRePassword": "NUEVA_CONTRASENA",
+  "nInGenero": 10080201
+}

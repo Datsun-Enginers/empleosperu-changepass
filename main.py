@@ -1,8 +1,12 @@
+import argparse
 import time
 
 from colorama import Fore, Style
 
-from services.password_changer import ErrorServicio, PasswordChanger
+from config_loader import cargar_config
+from http_client import ErrorHTTP, ErrorRed, ErrorServicio, ClienteHTTP
+from logging_setup import setup_logging
+from services.password_changer import PasswordChanger
 from ui.display import (
     imprimir_caja,
     imprimir_error,
@@ -14,9 +18,21 @@ from ui.display import (
     panel_titulo,
 )
 from ui.prompts import panel_input
+from validators import ErrorValidacion, validar_codigo, validar_contrasena, validar_dni, validar_email
+
+
+def _parse_args():
+    parser = argparse.ArgumentParser(description="Change Password - EmpleosPeru")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Modo verbose (logs de depuracion)")
+    return parser.parse_args()
 
 
 def flujo_completo():
+    args = _parse_args()
+    config = cargar_config()
+    verbose = args.verbose or config.get("verbose", False)
+    setup_logging(verbose)
+
     mostrar_banner()
 
     imprimir_caja("C A M B I A D O R  D E  C O N T R A S E N A\n Bienvenido al panel automatizado")
@@ -24,12 +40,29 @@ def flujo_completo():
     print()
     panel_titulo("Datos del usuario")
 
-    nu_documento = panel_input("Ingrese el DNI")
-    email = panel_input("Correo electronico")
+    while True:
+        try:
+            nu_documento = validar_dni(panel_input("Ingrese el DNI"))
+            break
+        except ErrorValidacion as e:
+            imprimir_info(f"Reintente: {e}")
+
+    while True:
+        try:
+            email = validar_email(panel_input("Correo electronico"))
+            break
+        except ErrorValidacion as e:
+            imprimir_info(f"Reintente: {e}")
 
     panel_cierre("Datos del usuario")
 
-    service = PasswordChanger()
+    cliente = ClienteHTTP(
+        timeout=config.get("timeout"),
+        max_retries=config.get("max_retries"),
+        backoff=config.get("backoff"),
+        proxies=config.get("proxies"),
+    )
+    service = PasswordChanger(cliente=cliente)
 
     try:
         imprimir_titulo_seccion(1, "VERIFICANDO USUARIO")
@@ -52,8 +85,19 @@ def flujo_completo():
         print()
         panel_titulo("Verificacion de contrasena")
 
-        codigo = panel_input("Revisa tu correo y escribe el codigo recibido")
-        nueva_contrasena = panel_input("Escribe la nueva contrasena")
+        while True:
+            try:
+                codigo = validar_codigo(panel_input("Revisa tu correo y escribe el codigo recibido"))
+                break
+            except ErrorValidacion as e:
+                imprimir_info(f"Reintente: {e}")
+
+        while True:
+            try:
+                nueva_contrasena = validar_contrasena(panel_input("Escribe la nueva contrasena"))
+                break
+            except ErrorValidacion as e:
+                imprimir_info(f"Reintente: {e}")
 
         panel_cierre("Verificacion de contrasena")
 
@@ -63,7 +107,7 @@ def flujo_completo():
         imprimir_exito("Contrasena actualizada correctamente")
         time.sleep(0.8)
 
-    except ErrorServicio as e:
+    except (ErrorServicio, ErrorRed, ErrorHTTP) as e:
         imprimir_error(str(e))
 
     print()
@@ -74,4 +118,13 @@ def flujo_completo():
 
 
 if __name__ == "__main__":
-    flujo_completo()
+    try:
+        flujo_completo()
+    except KeyboardInterrupt:
+        print()
+        imprimir_caja("SALIENDO DEL PROGRAMA\n Gracias por usar Change Password by SYLAR", Fore.CYAN)
+        print()
+    except EOFError:
+        print()
+        print(Fore.CYAN + Style.BRIGHT + "\n  [!] Sesion finalizada.\n")
+        print(Fore.CYAN + Style.BRIGHT + "  Gracias por usar Change Password by SYLAR\n")
