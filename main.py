@@ -8,6 +8,7 @@ from http_client import ErrorHTTP, ErrorRed, ErrorServicio, ClienteHTTP
 from logging_setup import setup_logging
 from services.password_changer import PasswordChanger
 from ui.display import (
+    imprimir_advertencia,
     imprimir_caja,
     imprimir_error,
     imprimir_exito,
@@ -25,6 +26,37 @@ def _parse_args():
     parser = argparse.ArgumentParser(description="Change Password - EmpleosPeru")
     parser.add_argument("-v", "--verbose", action="store_true", help="Modo verbose (logs de depuracion)")
     return parser.parse_args()
+
+
+def _es_error_codigo_incorrecto(e):
+    mensaje = str(e).lower()
+    return "codigo" in mensaje or "código" in mensaje or "no coincide" in mensaje
+
+
+def _es_error_contrasena(e):
+    mensaje = str(e).lower()
+    return (
+        "password" in mensaje
+        or "contrasena" in mensaje
+        or "mayuscula" in mensaje
+        or "caracter especial" in mensaje
+    )
+
+
+def _pedir_codigo():
+    while True:
+        try:
+            return validar_codigo(panel_input("Revisa tu correo y escribe el codigo recibido"))
+        except ErrorValidacion as e:
+            imprimir_info(f"Reintente: {e}")
+
+
+def _pedir_contrasena():
+    while True:
+        try:
+            return validar_contrasena(panel_input("Escribe la nueva contrasena"))
+        except ErrorValidacion as e:
+            imprimir_info(f"Reintente: {e}")
 
 
 def flujo_completo():
@@ -84,27 +116,34 @@ def flujo_completo():
 
         print()
         panel_titulo("Verificacion de contrasena")
-
-        while True:
-            try:
-                codigo = validar_codigo(panel_input("Revisa tu correo y escribe el codigo recibido"))
-                break
-            except ErrorValidacion as e:
-                imprimir_info(f"Reintente: {e}")
-
-        while True:
-            try:
-                nueva_contrasena = validar_contrasena(panel_input("Escribe la nueva contrasena"))
-                break
-            except ErrorValidacion as e:
-                imprimir_info(f"Reintente: {e}")
-
         panel_cierre("Verificacion de contrasena")
 
         imprimir_titulo_seccion(3, "CONFIRMANDO NUEVA CONTRASENA")
-        imprimir_info("Enviando datos de confirmacion...")
-        service.cambiar_contrasena(token, nu_documento, email, codigo, nueva_contrasena, celular)
-        imprimir_exito("Contrasena actualizada correctamente")
+        nueva_contrasena = None
+        codigo = None
+
+        while True:
+            if nueva_contrasena is None:
+                nueva_contrasena = _pedir_contrasena()
+            if codigo is None:
+                codigo = _pedir_codigo()
+
+            imprimir_info("Enviando datos de confirmacion...")
+            try:
+                service.cambiar_contrasena(token, nu_documento, email, codigo, nueva_contrasena, celular)
+                imprimir_exito("Contrasena actualizada correctamente")
+                break
+            except ErrorServicio as e:
+                if _es_error_contrasena(e):
+                    imprimir_advertencia(str(e))
+                    nueva_contrasena = None
+                    continue
+                if _es_error_codigo_incorrecto(e):
+                    imprimir_advertencia(str(e))
+                    codigo = None
+                    continue
+                raise
+
         time.sleep(0.8)
 
     except (ErrorServicio, ErrorRed, ErrorHTTP) as e:

@@ -6,6 +6,10 @@ class ErrorValidacion(Exception):
 
 
 REGEX_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+REGEX_MAYUSCULA = re.compile(r"[A-Z]")
+REGEX_MINUSCULA = re.compile(r"[a-z]")
+REGEX_DIGITO = re.compile(r"\d")
+REGEX_ESPECIAL = re.compile(r"[^A-Za-z0-9]")
 
 
 def validar_dni(dni):
@@ -33,4 +37,12 @@ def validar_contrasena(contrasena, min_longitud=8):
     contrasena = str(contrasena)
     if len(contrasena) < min_longitud:
         raise ErrorValidacion(f"La contrasena debe tener al menos {min_longitud} caracteres")
+    if not REGEX_MAYUSCULA.search(contrasena):
+        raise ErrorValidacion("La contrasena debe tener al menos una mayuscula")
+    if not REGEX_MINUSCULA.search(contrasena):
+        raise ErrorValidacion("La contrasena debe tener al menos una minuscula")
+    if not REGEX_DIGITO.search(contrasena):
+        raise ErrorValidacion("La contrasena debe tener al menos un digito")
+    if not REGEX_ESPECIAL.search(contrasena):
+        raise ErrorValidacion("La contrasena debe tener al menos un caracter especial")
     return contrasena

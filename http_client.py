@@ -16,7 +16,9 @@ class ErrorHTTP(ErrorRed):
 
 
 class ErrorServicio(Exception):
-    pass
+    def __init__(self, mensaje="", codigo=None):
+        self.codigo = codigo
+        super().__init__(mensaje)
 
 
 def _leer_json(resp):
@@ -70,5 +72,5 @@ class ClienteHTTP:
             raise ErrorHTTP(resp.status_code, resp.text[:200])
         data = _leer_json(resp)
         if not data.get("succes"):
-            raise ErrorServicio(data.get("description", "Operacion fallida"))
+            raise ErrorServicio(data.get("description", "Operacion fallida"), data.get("code"))
         return data

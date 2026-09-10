@@ -94,6 +94,10 @@ def imprimir_info(msg):
     print(Fore.CYAN + Style.BRIGHT + f"     [i] {msg}")
 
 
+def imprimir_advertencia(msg):
+    print(Fore.YELLOW + Style.BRIGHT + f"     [!] {msg}")
+
+
 def panel_titulo(titulo):
     relleno = ANCHO_PANEL - len(titulo) - 6
     print(
